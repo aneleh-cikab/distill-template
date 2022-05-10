@@ -140,11 +140,16 @@ The models we selected are widely used for various problems and also in predicti
 
 ### Hyperparameter tuning strategy
 
-We used random- and grid- search with 5-fold cross validation to tune our hyperparameters. As a scoring metric we chose the Area Under the ROC curve. We parametrized our search space by different hyperparameters unique to each model architecture; for instance, in Random Forest models, the number of trees, maximum depth, and minimum samples required to be at a terminal node, among others, were optimized. Moreover, we parametrized the sampling strategies---the intended class imbalance factor after re-sampling---that is applied to re-sample the dataset for our model implementations that use SMOTE and RUS.
+We used random- and grid- search with 5-fold cross validation to tune our hyperparameters. As a scoring metric we chose the Area Under the ROC curve. We parametrized our search space by different hyperparameters unique to each model architecture; for instance, in Random Forest models, the number of trees, maximum depth, and minimum samples required to be at a terminal node, among others, were optimized. Moreover, we parametrized the sampling strategies - the intended class imbalance factor after re-sampling - that is applied to re-sample the dataset for our model implementations that use SMOTE and RUS.
 
 ### Evaluation approach
 
+We evaluated our models by calculating the Area under the ROC curve (AUC-ROC) that is considered a good, general measure for classification problems. Additionally, we aimed for a model with a high Recall, which also implies a relatively higher false positive rate (FPR), and a lower prediction. As traffic accident prediction is a type of rare event prediction, our goal is to have a model with a high Recall since false positives can also correspond to high-risk circumstances which we also want to detect and, ultimately, avoid. An overview of these performance metrics and the corresponding confusion matrix can be seen in Figure 6.
 
+
+```{r fig6, eval = TRUE, echo = FALSE, fig.align='center',fig.cap = "Calculation of Precision, Recall and F1-score in the Confusion Matrix"}
+knitr::include_graphics("figures/confusion.png")
+```
 
 
 **Footnotes and Sidenotes**
@@ -156,7 +161,9 @@ This is a side note.
 </aside>
 
 
-## Results 
+## Results
+
+Before training our select models, we conducted an experiment checking the performace of the baseline model with different ratio of positive and negative events (accidents vs. non-accidents). 
 
 Present your most important results. Tables containing many numbers are overwhelming. Be selective and choose just the results that convey the story you're telling. Make it clear what the evaluation metrics are and what's being compared.
 
