@@ -1,16 +1,19 @@
 ---
-title: "Distill Article Template for NLP Final Report"
+title: "High resolution traffic accident prediction in Berlin"
 description: |
-  Add a short description of your article here (i.e. "We present a deep learning approach to classifying labeled texts and phrases in party manifestos, using the coding scheme and documents from the Manifesto Project Corpus.")
+  We trained several machine learning models to predict the risk of occurrence of a traffic accident on a road segment for a given hour and day in Berlin.
 author: 
-  - name: Allison Koh 
-    url: https://allisonkoh.github.io
-  - name: Second Author 
+  - name: Ma. Adelle Gia Arbo 
+    url: 216132@hertie-school.org
+  - name: Helena Bakic
+    url: bakic.helena@outlook.com
+  - name: Benedikt Ströbl
+    url: 213712@hertie-school.org
 date: "`r Sys.Date()`" 
 categories: 
-  - Natural Language Processing 
+  - Machine Learning 
 creative_commons: CC BY
-repository_url: https://github.com/allisonkoh/distill-template/
+repository_url: https://github.com/benediktstroebl/Machine-Learning-Project-Group-F
 output: 
   distill::distill_article: 
     self_contained: false
@@ -22,28 +25,113 @@ bibliography: bibliography.bib
 knitr::opts_chunk$set(echo = FALSE)
 
 # Load dependencies 
-library(reticulate) # For rendering Python code 
+library(reticulate) # For rendering Python code
+library(kableExtra)
+library(knitr)
 ```
 
-## Abstract 
 
-An abstract should concisely (less than 300 words) motivate the problem, describe your aims, describe your contribution, and highlight your main finding(s). 
+## Problem
 
-## Introduction / Background
+Traffic accidents are one of the leading causes of death and injuries globally, and in Germany they cause over 3,000 deaths and 300,000 injuries yearly. Studying traffic accidents and where and why they happen can help policy makers make our roads and us safer.
 
-The introduction explains the problem, why it's difficult, interesting, or important, how and why current methods succeed/fail at the problem, and explains the key ideas of your approach and results. Though an introduction covers similar material as an abstract, the introduction gives more space for motivation, detail, references to existing work, and to capture the reader's interest.
+However, traffic accident prediction is not an easy task. There are at least two key issues to tackle. First decision to make is the granularity, or spatial precision to which we predict accidents. One approach could be focusing only on a few select roads that are covered by sophisticated measurement instruments like loop detectors and cameras. This allows researchers to precisely measure important features such as traffic flow and lane occupancy. Another approach could be predicting accidents, or their severity, on datasets with millions of accidents aggregated at the level of the country. This approach helps uncover patterns that would be difficult to find on smaller datasets, but lacks precision that could help policy makers improve traffic safety at the level of community or city.
 
-## Related Work 
+Second key issue with traffic accident prediction is a computational one. Although traffic accidents have serious consequences they remain, luckily, rare events. However, many machine learning models do not do well when predicting rare events -- in part due to the focus on minimisation of the overall error rather than the detection of the rare class. Fortunately, computational approaches and models that tackle imbalanced datasets do exist and seem to be successful in predicting rare events.
 
-This section helps the reader understand the research context of your work, by providing an overview of existing work in the area.
+We wanted to build on previous work in two main ways. First, inspired by a recent paper [@hebert2019high] we applied a novel approach in traffic accident forecasting that aims to predicts the risk of an accident on a particular road segment withing a city road network at a particular day and hour. We believe that this approach is particularly useful for policy makers interested in road-safety improvement. Second, we explore and provide new evidence on the performance of different approaches for rare event prediction in the field of traffic accident forecasting.
 
-- You might discuss: papers that inspired your approach, papers that you use as baselines, papers proposing alternative approaches to the problem, papers applying your methods to different tasks, etc.
+## Data
 
-- This section shouldn't go into deep detail in any one paper (for example, there probably shouldn't be any equations) -- instead it should explain how the papers relate to each other, and how they relate to your work.
+We conducted this study using the example of accidents in Berlin using the following data sources:
 
-**See below for an example of how to cite related work in Markdown.**
+* Records of traffic accidents in Berlin: [Open Data Berlin](https://daten.berlin.de/) shares records of all traffic accidents that happened between 2018 and 2020; a total of 38,851 occurrences. For this study we used data on GPS-coordinates, year, month, day of the week, and hour of the accident.
 
-Bidirectional Encoder Representations from Transformers (BERT) have proven successful in prior attempts to classify phrases and short texts [@devlin2018bert].
+* Berlin road segment data: We used two datasets provided by the [Open Data Informationsstelle (Odis)](https://odis-berlin.de/ressourcen/): 
+  + We matched locations of traffic accidents (Figure 1(a)) to road segments in Berlin (Figure 1(b)) using the existing [geometric information dataset]((https://daten.odis-berlin.de/de/dataset/detailnetz_strassenabschnitte/)) on road segments in Berlin. Here we also extracted data on the length of the road segment.
+  + We used road segment surface [dataset](https://daten.odis-berlin.de/de/dataset/) to extract the information on whether a road segment is a main road or a side street.
+  
+
+```{r fig1, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Collision points (left), (b) Road Network (right)"}
+knitr::include_graphics(c("figures/1a.png", "figures/1b.png"))
+```
+
+
+* Weather data: Using the [Wetterdienst API](https://wetterdienst.readthedocs.io/en/latest/
+overview.html) we collected data on temperature (°C), humidity (%), precipitation duration (average minutes per 10 minutes intervals in the hour before the accident), precipitation height (average mm in the hour before the accident), and visibility (m) for every accident location, day of the week, and hour of the day between 2018 and 2020 from 5 Berlin weather stations.
+
+* Sun elevation: We used the Python API [PySolar](https://pysolar.readthedocs.io/en/latest/) to collect data on sun elevation angles per date and location in Berlin.
+
+
+## Method 
+
+The workflow of this study can be seen in Figure 1.
+
+```{r fig4, eval = TRUE, echo = FALSE, fig.align='center',fig.cap = "Study workflow"}
+knitr::include_graphics("figures/workflow.png")
+```
+
+### Generation of negative cases
+
+After we have collected raw data, we we first generated negative cases, that is, events when accidents did not happen. In traffic accident forecasting only positive cases (that is, occurrence of the accidents) are recorded. This makes sense, particularly as most of such records come from a traffic authority responding to an accident. However, that also means that available datasets have no records of negative cases at all -- so they have to be generated. Luckily, having an accurate database of accidents (recorded by the Berlin police), we know when accidents did not happen -- and that is at all possible other locations and times that were not recorded as accidents! Of course, it is not feasible to analyse all cases where accidents did not happen, as that would be computationally difficult. What we did instead, following the usual approach, was to calculate all possible combinations of time and locations for negative events and then drew a sample from it. We tried different accident/non-accident rations, as we will describe later, but in the end the one that worked the best was 5 non-accidents for every accident.
+
+### Data pre-processing
+
+The major part of data pre-processing included matching the accident GPS-locations to existing road segments in Berlin. This was done in geopandas by creating a spatial join function and specifying a buffer. The matching function finds which road segments intersect the collision point's circle area and match these segments to the collision point. Increasing (decreasing) the buffer value makes the circle area larger (smaller), thereby  increasing (decreasing) the number of road segments matched to a collision point. For example, setting the buffer to 2m (Figure 5a) identifies fewer road segments than setting the buffer to 20m (Figure 5b). A bigger buffer was also more correct in detecting accidents that occurred on road intersections. Different buffer values were used to make sure that we match all accident and non-accident GPS-locations to corresponding segments.  
+
+```{r fig5, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Matching 2m buffer (left), (b) Matching 20m buffer (right)"}
+knitr::include_graphics(c("figures/2_2.png", "figures/2_20.png"))
+```
+
+We then matched all other data to road segments' midpoints. For weather data, we 
+
+The training dataset (for years 2018 and 2019), has in total 52,118 road segments where accidents occurred. Here's a snippet of the final dataset we were working with:
+
+```{r kable}
+df <- read.csv("data/full_sample.csv")
+#head <- head(df)
+
+kable(head(df), "html") %>%
+    kable_styling() %>%
+    scroll_box(width = "100%", height = "200px")
+```
+
+<br>
+
+And here's what the variables' distributions look like:
+
+```{r fig2, eval = TRUE, echo = FALSE, out.width = '100%', fig.align='center', fig.cap = "Histograms of features for the training dataset (years 2018 and 2019)"}
+knitr::include_graphics("figures/histograms.png")
+```
+
+Finally, we can already get a glimpse of whether or not some road segments are more dangerous than others. As we can see from the figure below, it does seem that some main, long road segments -- that lead around the city centre or in it -- are more dangerous than small, side road segments. But, to see how correct we are when we make this prediction, we need to develop prediction models. 
+
+```{r fig3, eval = TRUE, echo = FALSE, fig.align='center',fig.cap = "Road segments with the highest (above) and lowest (below) number of accidents"}
+knitr::include_graphics("figures/segments.png")
+```
+
+
+### Selected models
+
+We implemented 7 machine learning models:
+
+1. Logistic Regression (Logit)
+2. Standard Random Forrest (SRF)
+3. Balanced Random Forrest (BRF)
+4. Standard Random Forrest with SMOTE and RUS (SRF_SMOTE_RUS)
+5. Balanced Bagging (BB)
+6. Support Vector Classifier with SMOTE and RUS (SCV_SMOTE_RUS)
+7. Extreme Gradient Boosting (XGBoost)
+
+Explain? SMOTE and RUS in particular...
+
+
+### Hyperparameter tuning strategy
+
+...
+
+### Evaluation approach...
+
 
 **Footnotes and Sidenotes**
 
@@ -53,64 +141,15 @@ You can use footnotes ^[This is a footnote. You can view this by hovering over t
 This is a side note. 
 </aside>
 
-## Proposed Method 
 
-This section details your approach(es) to the problem. For example, this is where you describe the architecture of your model, and any other key methods or algorithms.
+## Results 
 
-- You should be specific when describing your main approaches -- you probably want to include equations and figures.
-- You should also describe your baseline(s). Depending on space constraints, and how standard your baseline is, you might do this in detail, or simply refer the reader to some other paper for the details. 
-- If any part of your approach is original, make it clear (so we can give you credit!). For models and techniques that aren't yours, provide references.
-- If you're using any code that you didn't write yourself, make it clear and provide a reference or link. When describing something you coded yourself, make it clear (so we can give you credit!).
-
-**Below is an example of a figure:**
-
-```{r fig1, eval = TRUE, echo = FALSE, out.width = '100%', fig.cap = "Model architecture"}
-knitr::include_graphics("figures/BERTfig3.png")
-```
-
-## Experiments 
-
-**Data**: Describe the dataset(s) you are using (provide references). If it's not already clear, make sure the associated task is clearly described.
- 
-**Software**: Briefly list (and cite) software you used.
-
-**Hardware**: If relevant, list hardware resources you used.
-
-**Evaluation method**: Describe the evaluation metric(s) you used, plus any other details necessary to understand your evaluation.
-
-**Experimental details**: How you ran your experiments (e.g. model configurations, learning rate, training time, etc.) 
-
-**Results**: Report the quantitative results that you have found so far. Use a table or plot to compare multiple results and compare against baselines. 
-
-**Comment on quantitative results**: Are they what you expected? Better than you expected? Worse than you expected? Why do you think that is? What does this tell you about what you should do next? Including training curves might be useful to discuss whether things are training effectively.
-
-***Note***: **Feel free to use some of the code from your project to explain your experiments. See example code block below.**
-
-```{python bertcnn model parameters, echo = TRUE, eval = FALSE}
-OUTPUT_DIM = len(LABEL.vocab)
-DROPOUT = 0.5
-N_FILTERS = 100
-FILTER_SIZES = [2,3]
-
-model = BERTCNN(bert,
-                OUTPUT_DIM,
-                DROPOUT,
-                N_FILTERS,
-                FILTER_SIZES)
-```
+Present your most important results. Tables containing many numbers are overwhelming. Be selective and choose just the results that convey the story you're telling. Make it clear what the evaluation metrics are and what's being compared.
 
 ## Analysis 
 
-Your report should include some qualitative evaluation. That is, try to understand your system (how it works, when it succeeds and when it fails) by measuring or inspecting key characteristics or outputs of your model.
-
-- Types of qualitative evaluation include: commenting on selected examples, error analysis, measuring the performance metric for certain subsets of the data, ablation studies, comparing the behaviors of two systems beyond just the performance metric, and visualizing attention distributions or other activation heatmaps.
-
-- The Practical Tips lecture notes has a detailed section on qualitative evaluation -- you may find it useful to reread it.
+Show any plots, diagrams, examples and visualisations to provide interesting analysis. Make it clear what the reader should conclude from each figure.
 
 ## Conclusion(s)
 
-Summarize the main findings of your project, and what you learned. Highlight your achievements, and note the primary limitations of your work. If you like, you can describe avenues for future work.
-
-## Acknowledgments 
-
-List acknowledgments, if any. For example, if someone provided you a dataset, or you used someone else's resources, this is a good place to acknowledge the help or support you received.
+Briefly draw some main conclusions from your work. If you wish, you can outline future work.
