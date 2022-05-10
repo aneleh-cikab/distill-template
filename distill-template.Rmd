@@ -52,8 +52,8 @@ We conducted this study using the example of accidents in Berlin using the follo
   + We used road segment surface [dataset](https://daten.odis-berlin.de/de/dataset/) to extract the information on whether a road segment is a main road or a side street.
   
 
-```{r fig1, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Collision points (left), (b) Road Network (right)"}
-knitr::include_graphics(c("figures/1a.png", "figures/1b.png"))
+```{r fig1, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Collision points (above), (b) Road Network (below)"}
+knitr::include_graphics(c("figures/collisions.png", "figures/roads.png"))
 ```
 
 
@@ -80,7 +80,7 @@ After we collected raw data, we we first generated negative cases, that is, data
 The major part of data pre-processing included matching the accident GPS-locations to existing road segments in Berlin. This was done by creating a spatial join function and specifying a buffer. The matching function finds which road segments intersect the collision point's circle area and match these segments to the collision point. Increasing (decreasing) the buffer value makes the circle area larger (smaller), thereby  increasing (decreasing) the number of road segments matched to a collision point. For example, setting the buffer to 2m (Figure 3a) identifies fewer road segments than setting the buffer to 20m (Figure 3b). A bigger buffer was also more correct in detecting accidents that occurred on road intersections. Different buffer values were used to make sure that we match all accident and non-accident GPS-locations to corresponding segments.  
 
 ```{r fig3, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Matching 2m buffer (left), (b) Matching 20m buffer (right)"}
-knitr::include_graphics(c("figures/2_2.png", "figures/2_20.png"))
+knitr::include_graphics(c("figures/match5.png", "figures/match20.png"))
 ```
 
 We then matched all other data to road segments' midpoints. For weather features, we used the data for the closest weather station, and if that data was missing, second closest. Since Berlin accident dataset does not report the exact day of the month when the accident happened, we computed the monthly average per hour and used that information instead. Time features were recoded cyclicaly using sine and cosine functions to account for the dact that the extreme values (e.g. hour 1 and 23) have a similar meaning. The features we included in the model were:
@@ -172,7 +172,7 @@ Therefore, we concluded that the best performing model was the Balanced Random F
 <br>
 ```{r, echo = FALSE}
 
-results <- data.frame(model=c("Logit_baseline", "SFR_baseline", "Logit", "SRF", "BRF", "BB", "SRF_SMOTE_RUS", "SVC_SMOTE_RUS", "XGBoost"),
+results <- data.frame(Model=c("Logit_baseline", "SFR_baseline", "Logit", "SRF", "BRF", "BB", "SRF_SMOTE_RUS", "SVC_SMOTE_RUS", "XGBoost"),
                     AUC_ROC=c("88.3%", "83.6%", "86.8%", "84.0%", "88.7%", "80.5%", "87.4%", "75.4%", "85.4%"),
                     Precision=c("58.1%", "73.3%", "67.6%", "77.5%", "50.4%", "40.4%", "68.1%", "89.3%", "75.4%"),
                     Recall=c("88.3%", "72.0%", "80.6%", "71.9%", "94.5%", "83.7%", "81.8%", "52.0%", "75.4%"),
@@ -186,7 +186,7 @@ kable(results, "html", caption="Comparison of Classification Models") %>%
 <br>
 
 ```{r fig7, fig.show='hold', fig.align="center",fig.cap = "Precision-Recall and ROC Curves of the 7 Classification Models"}
-knitr::include_graphics(c("figures/prec_rec_curve.png", "figures/prec_rec_b_curve.png"))
+knitr::include_graphics(c("figures/prec_rec_curve.png", "figures/roc_curve.png"))
 ```
 
 ## Analysis 
