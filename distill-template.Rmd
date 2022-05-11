@@ -1,5 +1,5 @@
 ---
-title: "High resolution traffic accident prediction in Berlin"
+title: "High-resolution traffic accident prediction in Berlin"
 description: |
   We trained several machine learning models to predict the risk of occurrence of a traffic accident on a road segment for a given hour and day in Berlin.
 author: 
@@ -71,9 +71,9 @@ The workflow of this study can be seen in Figure 2.
 knitr::include_graphics("figures/workflow.png")
 ```
 
-### Generation of negative cases
+### Generation of negative examples
 
-After we collected raw data, we first generated negative cases, that is, data points when accidents did not happen using Apache Spark with [Pyspark](https://spark.apache.org/docs/latest/api/python/). In traffic accident forecasting only positive cases (that is, occurrence of the accidents) are recorded. This makes sense, particularly as most of such records come from a traffic authority responding to an accident. However, that also means that available datasets have no records of negative cases at all -- so they have to be generated. Luckily, having an accurate database of accidents (recorded by the Berlin police), means that we know when accidents did not happen -- and that is at all possible other locations and times that were not recorded as accidents! Of course, it is not feasible to analyse all cases where accidents did not happen, as that would be computationally difficult. What we did instead, following the usual approach, was to calculate all possible combinations of time and locations for negative events and then drew a sample from it. We tried different accident/non-accident rations, as we will describe later, but in the end the one we worked with was 5 non-accidents for every accident.
+After we collected raw data, we first generated negative examples, that is, data points when accidents did not happen using Apache Spark with [Pyspark](https://spark.apache.org/docs/latest/api/python/). In traffic accident forecasting only positive examples (that is, occurrence of the accidents) are recorded. This makes sense, particularly as most of such records come from a traffic authority responding to an accident. However, that also means that available datasets have no records of negative examples at all -- so they have to be generated. Luckily, having an accurate database of accidents (recorded by the Berlin police), means that we know when accidents did not happen -- and that is at all possible other locations and times that were not recorded as accidents! Of course, it is not feasible to analyse all examples where accidents did not happen, as that would be computationally difficult. What we did instead, following the usual approach, was to calculate all possible combinations of time and locations for negative events and then drew a sample from it. We tried different accident/non-accident rations, as we will describe later, but in the end the one we worked with was 5 non-accidents for every accident.
 
 ### Data pre-processing
 
@@ -140,7 +140,7 @@ We implemented 7 machine learning models:
 The models we selected are widely used for various problems and also in prediction of rare events. However, a small note on SMOTE and RUS techniques will be made.  Synthetic Minority Over-sampling Technique or SMOTE and Random
 Under-sampling or RUS are re-sampling techniques that have been found to work well for imbalanced datasets. A discussion of these techniques is beyond the scope of this article, but a detailed discussion can be found elsewhere [@chawla2002smote]. For this study, we applied SMOTE and RUS using 30% over-sampling and 50% under-sampling. In this case that means that on a training dataset containing 300,000 observations with imbalance factor of 5 (250,000 negative:50,000 positive), we first re-sample the minority class to have 30% the number of the majority class (75,000), then use random under-sampling to reduce the number of examples in the majority class to have 50% more than the minority class (150,000).
 
-### Hyperparameter tuning strategy
+### Hyperparameter tuning
 
 We used random- and grid- search with 5-fold cross validation to tune our hyperparameters. As a scoring metric we chose the Area Under the ROC curve. We parametrized our search space by different hyperparameters unique to each model architecture; for instance, in Random Forest models, the number of trees, maximum depth, and minimum samples required to be at a terminal node, among others, were optimized. Moreover, we parametrized the sampling strategies - the intended class imbalance factor after re-sampling - that is applied to re-sample the dataset for our model implementations that use SMOTE and RUS.
 
