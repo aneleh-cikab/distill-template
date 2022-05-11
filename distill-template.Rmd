@@ -35,11 +35,11 @@ library(knitr)
 
 Traffic accidents are one of the leading causes of death and injuries globally, and in Germany they cause over 3,000 deaths and 300,000 injuries yearly. Studying traffic accidents and where and why they happen can help policy makers make our roads safer.
 
-There are at least two key issues to tackle when predicting traffic accidents. First decision to make is on the granularity, or spatial precision, to which we predict accidents. One approach could be focusing only on a few select roads that are covered by sophisticated measurement instruments like loop detectors and cameras. This allows researchers to precisely measure important features such as traffic flow and lane occupancy. Another approach could be predicting accidents, or their severity, on datasets with millions of accidents aggregated at the level of the country. This approach helps uncover patterns that would be difficult to find on smaller datasets, but lacks precision that could help policy makers improve traffic safety at the level ofa  community or a city.
+There are at least two key issues to tackle when predicting traffic accidents. First decision to make is on the granularity, or spatial precision, to which we predict accidents. One approach could be focusing only on a few select roads that are covered by sophisticated measurement instruments like loop detectors and cameras. This allows researchers to precisely measure important features such as traffic flow and lane occupancy. Another approach could be predicting accidents, or their severity, on datasets with millions of accidents aggregated at the level of the country. This approach helps uncover patterns that would be difficult to find on smaller datasets, but lacks precision that could help policy makers improve traffic safety at the level of a  community or a city.
 
 Second key issue with traffic accident prediction is a computational one. Although traffic accidents have serious consequences they remain, luckily, rare events. However, many machine learning models do not do well when predicting rare events -- in part due to the focus on minimisation of the overall error rather than the detection of the rare class. Fortunately, computational approaches and models that tackle imbalanced datasets do exist and seem to be successful in predicting rare events.
 
-We wanted to build on previous work in two main ways. First, inspired by a recent paper [@hebert2019high] we applied a novel approach in traffic accident forecasting that aims to predicts the risk of an accident on a particular road segment withing a city road network at a particular day and hour. We believe that this approach is particularly useful for policy makers interested in road-safety improvement. Second, we explore and provide new evidence on the performance of different approaches for rare event prediction in the field of traffic accident forecasting.
+We wanted to build on previous work in two main ways. First, inspired by a recent paper [@hebert2019high] we applied a novel approach in traffic accident forecasting that aims to predict the risk of an accident on a particular road segment withing a city road network at a particular day and hour. We believe that this approach is particularly useful for policy makers interested in road-safety improvement. Second, we explore and provide new evidence on the performance of different approaches for rare event prediction in the field of traffic accident forecasting.
 
 ## Data
 
@@ -47,9 +47,9 @@ We conducted this study using the example of accidents in Berlin using the follo
 
 * Records of traffic accidents in Berlin: [Open Data Berlin](https://daten.berlin.de/) shares records of all traffic accidents that happened between 2018 and 2020; a total of 38,851 occurrences. For this study we used data on GPS-coordinates, year, month, day of the week, and hour of the accident.
 
-* Berlin road segment data: We used two datasets provided by the [Open Data Informationsstelle (Odis)](https://odis-berlin.de/ressourcen/): 
+* Berlin road segment data: We used two datasets provided by the [Open Data Informationsstelle (ODIS)](https://odis-berlin.de/ressourcen/): 
   + To match locations of traffic accidents (Figure 1a) to road segments in Berlin (Figure 1b) we used the existing [geometric information dataset]((https://daten.odis-berlin.de/de/dataset/detailnetz_strassenabschnitte/)) on road segments in Berlin. From here we also used data on the length of the road segment.
-  + We used road segment surface [dataset](https://daten.odis-berlin.de/de/dataset/) to extract the information on whether a road segment is a main road or a side street.
+  + We used road segment surface [dataset](https://daten.odis-berlin.de/de/dataset/strassenflaechen/) to extract the information on whether a road segment is a main road or a side street.
   
 
 ```{r fig1, echo = FALSE, fig.show='hold', fig.align="center", fig.cap = "(a) Collision points (above), (b) Road Network (below)"}
@@ -73,7 +73,7 @@ knitr::include_graphics("figures/workflow.png")
 
 ### Generation of negative cases
 
-After we collected raw data, we we first generated negative cases, that is, data points when accidents did not happen. In traffic accident forecasting only positive cases (that is, occurrence of the accidents) are recorded. This makes sense, particularly as most of such records come from a traffic authority responding to an accident. However, that also means that available datasets have no records of negative cases at all -- so they have to be generated. Luckily, having an accurate database of accidents (recorded by the Berlin police), means that we know when accidents did not happen -- and that is at all possible other locations and times that were not recorded as accidents! Of course, it is not feasible to analyse all cases where accidents did not happen, as that would be computationally difficult. What we did instead, following the usual approach, was to calculate all possible combinations of time and locations for negative events and then drew a sample from it. We tried different accident/non-accident rations, as we will describe later, but in the end the one we worked with was 5 non-accidents for every accident.
+After we collected raw data, we first generated negative cases, that is, data points when accidents did not happen. In traffic accident forecasting only positive cases (that is, occurrence of the accidents) are recorded. This makes sense, particularly as most of such records come from a traffic authority responding to an accident. However, that also means that available datasets have no records of negative cases at all -- so they have to be generated. Luckily, having an accurate database of accidents (recorded by the Berlin police), means that we know when accidents did not happen -- and that is at all possible other locations and times that were not recorded as accidents! Of course, it is not feasible to analyse all cases where accidents did not happen, as that would be computationally difficult. What we did instead, following the usual approach, was to calculate all possible combinations of time and locations for negative events and then drew a sample from it. We tried different accident/non-accident rations, as we will describe later, but in the end the one we worked with was 5 non-accidents for every accident.
 
 ### Data pre-processing
 
@@ -83,7 +83,7 @@ The major part of data pre-processing included matching the accident GPS-locatio
 knitr::include_graphics(c("figures/match5.png", "figures/match20.png"))
 ```
 
-We then matched all other data to road segments' midpoints. For weather features, we used the data for the closest weather station, and if that data was missing, second closest. Since Berlin accident dataset does not report the exact day of the month when the accident happened, we computed the monthly average per hour and used that information instead. Time features were recoded cyclicaly using sine and cosine functions to account for the dact that the extreme values (e.g. hour 1 and 23) have a similar meaning. The features we included in the model were:
+We then matched all other data to road segments' midpoints. For weather features, we used the data for the closest weather station, and if that data was missing, second closest. Since Berlin accident dataset does not report the exact day of the month when the accident happened, we computed the monthly average per hour and used that information instead. Time features were recoded cyclically using sine and cosine functions to account for the fact that the extreme values (e.g. hour 1 and 23) have a similar meaning. The features we included in the model were:
 
 1. month_cos and month_sin: cosine and sine of cyclical encoded month
 2. hour_cos and hour_sin: cosine and sine of cyclical encoded hour
@@ -137,7 +137,8 @@ We implemented 7 machine learning models:
 6. Support Vector Classifier with SMOTE and RUS (SCV_SMOTE_RUS)
 7. Extreme Gradient Boosting (XGBoost)
 
-The models we selected are widely used for various problems and also in prediction of rare events. However, a small note on SMOTE and RUS techniques will be made. SOMOTE and RUS are re-sampling techniques that have been found to work well for imbalanced datasets. A discussion of these techniques is beyond the scope of this article, but a detailed discussion can be found elsewhere [@chawla2002smote]. For this study, we applied SMOTE and RUS using 30% over-sampling and 50% under-sampling. In this case that means that on a training dataset containing 300,000 observations with imbalance factor of 5 (250,000 negative:50,000 positive), we first re-sample the minority class to have 30% the number of the majority class (75,000), then use random under-sampling to reduce the number of examples in the majority class to have 50% more than the minority class (150,000).
+The models we selected are widely used for various problems and also in prediction of rare events. However, a small note on SMOTE and RUS techniques will be made.  Synthetic Minority Over-sampling Technique or SMOTE and Random
+Under-sampling or RUS are re-sampling techniques that have been found to work well for imbalanced datasets. A discussion of these techniques is beyond the scope of this article, but a detailed discussion can be found elsewhere [@chawla2002smote]. For this study, we applied SMOTE and RUS using 30% over-sampling and 50% under-sampling. In this case that means that on a training dataset containing 300,000 observations with imbalance factor of 5 (250,000 negative:50,000 positive), we first re-sample the minority class to have 30% the number of the majority class (75,000), then use random under-sampling to reduce the number of examples in the majority class to have 50% more than the minority class (150,000).
 
 ### Hyperparameter tuning strategy
 
@@ -185,7 +186,7 @@ kable(results, "html", caption="Comparison of Classification Models") %>%
 
 <br>
 
-```{r fig7, fig.show='hold', fig.align="center",fig.cap = "Precision-Recall and ROC Curves of the 7 Classification Models"}
+```{r fig7, fig.show='hold', fig.align="center",fig.cap = "Precision-Recall (above) and ROC Curves (below) of the 7 Classification Models"}
 knitr::include_graphics(c("figures/prec_rec_curve.png", "figures/roc_curve.png"))
 ```
 
